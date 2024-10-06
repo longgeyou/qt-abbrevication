@@ -20,7 +20,7 @@
    <enum>Qt::LeftToRight</enum>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true">font: 16pt &quot;楷体&quot;;</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -49,9 +49,9 @@
            <widget class="QLineEdit" name="lineEdit_search"/>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_6">
+           <widget class="QPushButton" name="pushButton_try">
             <property name="text">
-             <string>PushButton</string>
+             <string>试一下</string>
             </property>
            </widget>
           </item>
@@ -77,7 +77,7 @@
              <x>0</x>
              <y>0</y>
              <width>222</width>
-             <height>488</height>
+             <height>474</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_abbreButton">
@@ -119,7 +119,7 @@
      <x>0</x>
      <y>0</y>
      <width>816</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -129,12 +129,15 @@
     <property name="title">
      <string>帮助</string>
     </property>
+    <addaction name="action_helpUse"/>
    </widget>
    <widget class="QMenu" name="menu_content">
     <property name="title">
      <string>设置</string>
     </property>
     <addaction name="action_set_content"/>
+    <addaction name="action_fontAdd"/>
+    <addaction name="action_fontDec"/>
    </widget>
    <widget class="QMenu" name="menu_test">
     <property name="title">
@@ -149,7 +152,7 @@
     <property name="title">
      <string>文件</string>
     </property>
-    <addaction name="action"/>
+    <addaction name="action_scan"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_content"/>
@@ -171,7 +174,7 @@
     <string>设置目录</string>
    </property>
   </action>
-  <action name="action">
+  <action name="action_scan">
    <property name="text">
     <string>扫描</string>
    </property>
@@ -184,6 +187,21 @@
   <action name="action_test">
    <property name="text">
     <string>测试</string>
+   </property>
+  </action>
+  <action name="action_helpUse">
+   <property name="text">
+    <string>如何使用</string>
+   </property>
+  </action>
+  <action name="action_fontAdd">
+   <property name="text">
+    <string>字体+</string>
+   </property>
+  </action>
+  <action name="action_fontDec">
+   <property name="text">
+    <string>字体-</string>
    </property>
   </action>
  </widget>

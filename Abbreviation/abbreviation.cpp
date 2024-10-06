@@ -21,20 +21,26 @@ Abbreviation::Abbreviation(QWidget *parent) :
     setUi();
     init();
 
-    //连接
+
+    //主窗口菜单功能
     connect(ui->action_add_button, &QAction::triggered, this, &Abbreviation::slot_addButtonTest);
     connect(ui->action_test, &QAction::triggered, this, &Abbreviation::slot_test);
     connect(ui->action_text_show, &QAction::triggered, this, &Abbreviation::slot_textShow);
     connect(ui->action_set_content, &QAction::triggered, this, &Abbreviation::slot_dirSet);
-    connect(dialogUi->pushButton_fileBrowse, &QPushButton::clicked, this, &Abbreviation::slot_fileBrowse);
+    connect(ui->action_scan, &QAction::triggered, this, &Abbreviation::slot_scan);    //扫描
+    connect(ui->action_fileProTest, &QAction::triggered, this, &Abbreviation::slot_fileProTest);
+    connect(ui->action_helpUse, &QAction::triggered, this, &Abbreviation::slot_helpUse);    //使用帮助
+    connect(ui->action_fontAdd, &QAction::triggered, [this](){ slot_fontChange(1);});   //字体变化，变大
+    connect(ui->action_fontDec, &QAction::triggered, [this](){ slot_fontChange(2);});   //字体变化，变小
 
+    //主窗口控件
+    connect(ui->lineEdit_search, &QLineEdit::textEdited, this, &Abbreviation::slot_search);    //搜索框
+    connect(ui->pushButton_try, &QPushButton::clicked, this, &Abbreviation::slot_try);    //try按钮
+    //目录设置对话框
+    connect(dialogUi->pushButton_fileBrowse, &QPushButton::clicked, this, &Abbreviation::slot_fileBrowse);
     connect(dialogUi->buttonBox, &QDialogButtonBox::accepted, this, &Abbreviation::slot_dialogAccept);
     connect(dialogUi->buttonBox, &QDialogButtonBox::rejected, this, &Abbreviation::slot_dialogReject);
     connect(dialogUi->pushButton_apply, &QPushButton::clicked, this, &Abbreviation::slot_dialogApply);
-
-    connect(ui->action_fileProTest, &QAction::triggered, this, &Abbreviation::slot_fileProTest);
-
-    connect(ui->lineEdit_search, &QLineEdit::textEdited, this, &Abbreviation::slot_search);    //搜索框
 
 
 }
@@ -68,16 +74,29 @@ void Abbreviation::setUi()
 void Abbreviation::init()
 {
     qDebug()<<"===================init start=======================";
-    init_dir();
+    init_dir(); //目录初始化
+    filePro(false); //扫描文件
 
+    //属性值设置，注意，上面的 init_dir 已经包含了 配置文件的载入
+    //例子："font: 12pt '楷体';"
+    QString fontValue;
+    QString sheet;
+    if(getConfigValue(QString(PROPERTY_FONTSIZE), &fontValue))
+    {
+        int size = fontValue.toInt();
+        if(size > 0 && size< 100)  //确保数字的范围
+        {
+            sheet = QString("font: %1pt '楷体';").arg(size);
+            ui->textBrowser_main->setStyleSheet(sheet);
+        }
+    }
 
+    //显示所有搜索结果
+    searchResult.clear();
+    for(const auto &elem : abbreviationData)
+        searchResult.push_back(elem);
+    searchResultShow();
 }
-
-
-
-
-
-
 
 
 
@@ -87,14 +106,14 @@ void Abbreviation::init()
 //测试（菜单栏）：按钮新增
 void Abbreviation::slot_addButtonTest()
 {
-    static int cnt = 1;
+    /*static int cnt = 1;
     for(int i = 0; i < 5; i++)
     {
         QPushButton *pushButton = new QPushButton(ui->centralWidget);
         pushButton->setText(QString("新增%1,count=%2").arg(cnt++).arg(ui->verticalLayout_abbreButton->count())); //QStringLiteral
         ui->verticalLayout_abbreButton->insertWidget(ui->verticalLayout_abbreButton->count() - 1, pushButton);
         pushButtonVector.push_back(pushButton);
-    }
+    }*/
 }
 
 //测试（菜单栏）：文本显示
@@ -105,7 +124,7 @@ void Abbreviation::slot_textShow()
     //ui->textBrowser_main->setText("hello world!");
 
     //用户目录
-    QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation); //用户目录
+    //QString userPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation); //用户目录
     //qDebug() << userDocumentsDir;
 
     //创建目录
@@ -124,7 +143,80 @@ void Abbreviation::slot_textShow()
     }*/
 }
 
+//扫描
+void Abbreviation::slot_scan()
+{
+    filePro(true); //扫描文件
 
+
+}
+
+//使用帮助
+/*
+1、设置目录
+    1.1 属性配置文件，一般在用户目录文件夹，例如 C:/user
+        /username，子目录为.share/abbreviation，文件名
+        .config，内容为HomeDir=F:/test，修改F:/test即
+        可；
+    1.2 菜单栏
+2、放置数据文件
+    2.1 如果设置的目录为"F:/test"，那么在该目录下新建文
+        件夹data，把数据文件放在此文件夹下；
+    2.2 应用打开时会自动扫描data文件夹下的所有文件，包括
+        子目录。
+3、数据文件内容
+    3.1	一条数据项有四个内容，即缩写、解释、来自的文档
+        名、数据文档名；
+    3.1 例子【AES Advanced Encryption Standard】：一般一
+        行代表一条数据，这里AES是缩写，后面的是解释；
+    3.2 特殊的缩写DOCUMENT，例如【DOCUMENT T-REC-G.984.
+        4.pdf】，用于指定后面的数据项来自于文档《T-REC-
+        G.984.4.pdf》。
+*/
+void Abbreviation::slot_helpUse()
+{
+    QString str(
+    "1. 设置目录:\r\n"
+    "   1.1 属性配置文件，一般在用户目录文件夹，例如 \"C:/user/username\"，子目录为 \".share/abbreviation\"，文件名为 \".config\"，内容为 HomeDir=F:/test，修改 F:/test 即可；\r\n"
+    "   1.2 菜单栏配置\r\n"
+    "\r\n"
+    "2. 放置数据文件:\r\n"
+    "   2.1 如果设置的目录为 \"F:/test\"，那么在该目录下新建文件夹 data，把数据文件放在此文件夹下；\r\n"
+    "   2.2 应用打开时会自动扫描 data 文件夹下的所有文件，包括子目录。\r\n"
+    "\r\n"
+    "3. 数据文件内容:\r\n"
+    "   3.1 一条数据项有四个内容，即缩写、解释、来自的文档名、数据文档名；\r\n"
+    "   3.2 例子【AES Advanced Encryption Standard】：一般一行代表一条数据，这里 AES 是缩写，后面的是解释；\r\n"
+    "   3.3 特殊的缩写 DOCUMENT，例如【DOCUMENT T-REC-G.984.4.pdf】，用于指定后面的数据项来自于文档《T-REC-G.984.4.pdf》。"
+        );
+    ui->textBrowser_main->setText(str);
+}
+
+//菜单栏功能：字体变化 1：变大 2：变小
+//参考：font: 16pt "楷体";
+void Abbreviation::slot_fontChange(int n)
+{
+    qDebug() << "slot_fontChange n=" << n;
+    if(n != 1 && n != 2)return;
+    QString fontValue;
+    QString sheet;
+    if(configDataIsOk && getConfigValue(QString(PROPERTY_FONTSIZE), &fontValue))
+    {
+        int size = fontValue.toInt();
+        if(size > 0 && size< 100)  //确保数字的范围
+        {
+            if(n == 1)
+                size++;
+            else if(n == 2)
+                size--;
+            sheet = QString("font: %1pt '楷体';").arg(size);
+            ui->textBrowser_main->setStyleSheet(sheet);
+            //存入配置文件
+            setConfigValue(QString(PROPERTY_FONTSIZE), QString("%1").arg(size));
+            if(configFIleIsExist)configFileSave(configFIleName);
+        }
+    }
+}
 
 
 
@@ -196,7 +288,7 @@ void Abbreviation::slot_dialogApply()
     }
     else
     {
-        if(configDataIsOk && getConfigValue(PROPERTY_NAME_HOME_DIR, dirValue))
+        if(configDataIsOk && setConfigValue(PROPERTY_NAME_HOME_DIR, dirValue))
         {
             dialogUi->label_result->setText("设置成功");
 
@@ -449,7 +541,7 @@ bool Abbreviation::getConfigValue(QString propertyName, QString *value)
 }
 
 //配置属性值的设置
-bool Abbreviation::getConfigValue(QString propertyName, QString value)
+bool Abbreviation::setConfigValue(QString propertyName, QString value)
 {
     bool ret = false;
     if(configDataIsOk)
@@ -477,34 +569,47 @@ void Abbreviation::slot_fileProTest()
 
     //qDebug() << current_dir_path << "-------------文件------------";
     //qDebug() << "主目录" << current_dir_path;
+
+    //filePro(true);
+
+}
+
+//扫描文件和处理（打开应用时会调用一次）
+void Abbreviation::filePro(bool showIsOpen)
+{
     vector_fileName.clear();
-    dirFindAllFile(current_dir_path);
+    QString path = QString("%1/%2").arg(current_dir_path).arg(DATA_DIR);
+    dirFindAllFile(path);
 
-
-    qDebug() << "-------------文件处理------------";
-
+    //qDebug() << "-------------文件处理------------";
+    abbreviationData.clear();   //清空存储区
+    QString str("扫描中...\r\n");
     for(const auto &elem : vector_fileName)
     {
-        qDebug() << "文件" << elem;
+        //qDebug() << "文件" << elem;
+        str.append(elem);
+        str.append("\r\n");
         abbreFilePro(elem);
     }
+    str.append("扫描完成");
+    if(showIsOpen)ui->textBrowser_main->setText(str);
 
-
-
+    //排序
     std::sort(abbreviationData.begin(), abbreviationData.end(), [](const  struct AbbreviationData &a, const  struct AbbreviationData &b) {
         return a.abbre.toLower() < b.abbre.toLower();
     });
 
-    qDebug() << "-------------内容显示------------";
+    /*qDebug() << "-------------内容显示------------";
     for(const auto &elem : abbreviationData)
     {
         qDebug() << "缩写：" << elem.abbre <<
                     " 描述：" << elem.describe <<
                     " 文档：" << elem.doc <<
                     " 来自：" << elem.from;
-    }
+    }*/
 
 }
+
 
 
 //目录下找到所有的文件
@@ -634,7 +739,7 @@ mark_step_end:
 
     if(step == step_describe)
     {
-        if(QString(bufAbbre) == QString(PROPERTY_DOCUMENT))   //特殊的项，DOCUMENT开头，表示当前文档名
+        if(QString(bufAbbre) == QString(ABBREVIATION_DOCUMENT))   //特殊的项，DOCUMENT开头，表示当前文档名
         {
             currentReferDocument = bufDescribe;
         }
@@ -659,7 +764,11 @@ mark_step_end:
 //槽响应：测试
 void Abbreviation::slot_test()
 {
-    //qDebug() << "slot_test";
+    qDebug() << "slot_test";
+
+    //QFont font("楷体", 14);
+    //ui->textBrowser_main->setFont(font);
+    //ui->textBrowser_main->setStyleSheet("font: 12pt '楷体';");
 
 #if 0
     static int cnt = 1;
@@ -672,7 +781,7 @@ void Abbreviation::slot_test()
     cnt++;
 #endif
 
-    searchFilter(QString(ui->lineEdit_search->text()));
+    //searchFilter(QString(ui->lineEdit_search->text()));
 
 #if 0
     searchFilter(QString(ui->lineEdit_search->text()));
@@ -704,8 +813,33 @@ void Abbreviation::slot_test()
     }
 #endif
 
-
-
+#if 0
+    QString htmlContent =
+            "<!DOCTYPE html>\n"
+            "<style>\n"
+            "p1 {\n"
+            "  font-size: 60px;\n"
+            "  color: #f0f;\n"
+            "}\n"
+            "p2 {\n"
+            "    font-size: 30px;\n"
+            "    /* background-color: red; */\n"
+            "    color: black;\n"
+            "}\n"
+            "p3 {\n"
+            "  font-size: 16px;\n"
+            "  color: blue;\n"
+            "}\n"
+            "</style>\n"
+            "<body>\n"
+            "  <p1><b>ACE</b></p1><br><br>\n"
+            "  <p2>Circuit Emulation Service </p2><br><br>\n"
+            "  <p3><i>disnet-conflict-study.pdf</i></p3><br>\n"
+            "  <p3><i>disnet-conflict-study.pdf</i></p3>\n"
+            "</body>\n"
+            "</html>";
+    ui->textBrowser_main->setHtml(htmlContent);
+#endif
 }
 
 //按钮响应
@@ -716,7 +850,9 @@ void Abbreviation::slot_abbreButtonOnClicked(int num)
     QString str;
 
     struct AbbreviationData result = *(searchResult.begin() + num);
-    str.append("缩写：");
+
+
+    /*str.append("缩写：");
     str.append(result.abbre);
     str.append("\r\n");
     str.append("描述：");
@@ -727,8 +863,35 @@ void Abbreviation::slot_abbreButtonOnClicked(int num)
     str.append("\r\n");
     str.append("来自：");
     str.append(result.from);
+    ui->textBrowser_main->setText(str);*/
 
-    ui->textBrowser_main->setText(str);
+    QString htmlContent = QString(
+            "<!DOCTYPE html>\n"
+            "<style>\n"
+            "p1 {\n"
+            "  font-size: 60px;\n"
+            "  color: #f0f;\n"
+            "}\n"
+            "p2 {\n"
+            "    font-size: 30px;\n"
+            "    /* background-color: red; */\n"
+            "    color: black;\n"
+            "}\n"
+            "p3 {\n"
+            "  font-size: 16px;\n"
+            "  color: blue;\n"
+            "}\n"
+            "</style>\n"
+            "<body>\n"
+            "  <p1><b>%1</b></p1><br><br>\n"
+            "  <p2>%2</p2><br><br>\n"
+            "  <p3><i>%3</i></p3><br>\n"
+            "  <p3><i>%4</i></p3>\n"
+            "</body>\n"
+            "</html>"
+                ).arg(result.abbre).arg(result.describe).arg(result.doc).arg(result.from);
+
+    ui->textBrowser_main->setHtml(htmlContent);
 }
 
 
@@ -738,34 +901,8 @@ void Abbreviation::slot_search()
     qDebug() << "slot_search ...";
 
     searchFilter(QString(ui->lineEdit_search->text()));
-    QPushButton *pushButton;
-    int index;
 
-
-    //清空
-    for(auto probe = pushButtonVector.begin(); probe != pushButtonVector.end();)
-    {
-        QPushButton *button = *probe;
-        ui->verticalLayout_abbreButton->removeWidget(button);
-        delete button;
-        probe = pushButtonVector.erase(probe);
-    }
-
-    //搜索结果显示
-    qDebug() <<"---------------搜索结果--------------";
-    index = 0;
-    for(const auto &elem : searchResult)
-    {
-        pushButton = new QPushButton;
-        pushButton->setText(elem.abbre);
-        ui->verticalLayout_abbreButton->insertWidget(ui->verticalLayout_abbreButton->count() - 1, pushButton);
-        pushButtonVector.push_back(pushButton);
-
-        connect(pushButton, &QPushButton::clicked, [this, index](){slot_abbreButtonOnClicked(index);} );
-
-        qDebug() << "缩写：" << elem.abbre << " index：" << index;
-        index++;
-    }
+    searchResultShow();
 }
 
 //搜索筛选
@@ -798,10 +935,70 @@ void Abbreviation::searchFilter(QString key)
                     " 文档：" << elem.doc <<
                     " 来自：" << elem.from;
     }*/
-
 }
 
 
+//显示搜索结果
+void Abbreviation::searchResultShow()
+{
+    QPushButton *pushButton;
+    int index;
+    //清空
+    for(auto probe = pushButtonVector.begin(); probe != pushButtonVector.end();)
+    {
+        QPushButton *button = *probe;
+        ui->verticalLayout_abbreButton->removeWidget(button);
+        delete button;
+        probe = pushButtonVector.erase(probe);
+    }
+
+    //搜索结果显示
+    //qDebug() <<"---------------搜索结果--------------";
+    index = 0;
+    QString str = ui->lineEdit_search->text();
+    for(const auto &elem : searchResult)
+    {
+        pushButton = new QPushButton;
+        pushButton->setText(elem.abbre);
+
+        //完全匹配的额外操作
+        if(str.toLower() == elem.abbre.toLower() && str != QString(""))
+        {
+            pushButton->setStyleSheet("background-color: red;");
+            slot_abbreButtonOnClicked(index);
+        }
+        ui->verticalLayout_abbreButton->insertWidget(ui->verticalLayout_abbreButton->count() - 1, pushButton);
+        pushButtonVector.push_back(pushButton);
+
+        connect(pushButton, &QPushButton::clicked, [this, index](){slot_abbreButtonOnClicked(index);} );
+
+        //qDebug() << "缩写：" << elem.abbre << " index：" << index;
+        index++;
+    }
+}
+
+//槽响应：try按钮
+void Abbreviation::slot_try()
+{
+    if(ui->lineEdit_search->text() != QString("") || pushButtonVector.size() != 0)
+    {
+        searchResult.clear();
+        searchResultShow();
+        ui->lineEdit_search->setText(QString(""));
+        ui->textBrowser_main->setText(QString(""));
+    }
+    else
+    {
+        searchResult.clear();
+        for(const auto &elem : abbreviationData)
+        {
+            searchResult.push_back(elem);
+        }
+        searchResultShow();
+    }
+
+
+}
 
 
 

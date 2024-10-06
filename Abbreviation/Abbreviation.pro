@@ -30,7 +30,9 @@ SOURCES += \
 HEADERS += \
         abbreviation.h \
     ../build-Abbreviation-aa-Debug/ui_abbreviation.h \
-    ../build-Abbreviation-aa-Debug/ui_dialogdirectory.h
+    ../build-Abbreviation-aa-Debug/ui_dialogdirectory.h \
+    ../Debug/ui_abbreviation.h \
+    ../Debug/ui_dialogdirectory.h
 
 FORMS += \
         abbreviation.ui \

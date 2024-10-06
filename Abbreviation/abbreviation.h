@@ -30,9 +30,14 @@ typedef struct ConfigData{  //配置项的数据结构
 };
 
 
+//特殊的缩写
+#define ABBREVIATION_DOCUMENT "DOCUMENT"
+
 //属性名称
 #define PROPERTY_NAME_HOME_DIR "HomeDir"
-#define PROPERTY_DOCUMENT "DOCUMENT"
+#define PROPERTY_FONTSIZE "FontSize"   //字体大小
+
+
 namespace Ui {
 class Abbreviation;
 class Dialog;
@@ -58,15 +63,16 @@ public:
     bool configFIleIsExist;
     QString configFIleName;
     void init_dir();
-    std::vector<struct_configData> configData;    //配置数据
+    std::vector<struct_configData> configData;    //配置数据(换成字典数据类型更合适，以后修改)
     bool configFileLoad(QString configFileName);    //载入配置文件
     bool getConfigValue(QString propertyName, QString *value);  //获取配置值
-    bool getConfigValue(QString propertyName, QString value);    //设置配置值
+    bool setConfigValue(QString propertyName, QString value);    //设置配置值
     bool configFileSave(QString configFileName); //属性存入配置
     bool configDataIsOk;
 
     //2、缩写解释的文件处理
     std::vector<struct AbbreviationData> abbreviationData;      //缩写信息的存储
+    void filePro(bool showIsOpen);     //所有文件的处理
     void abbreFilePro(QString fileName);    //单个文件内容的处理
     std::vector<QString> vector_fileName;      //文件名的存储
     void dirFindAllFile(QString dirName);       //目录下找到所有文件
@@ -76,16 +82,23 @@ public:
     //3、搜索显示
     void searchFilter(QString key);
     std::vector<struct AbbreviationData> searchResult;      //搜索结果
+    void searchResultShow();
+
 
 
 public slots:
-    //主窗口
+    //主窗口菜单
     void slot_addButtonTest(); //添加按钮
     void slot_test();  //测试
     void slot_textShow();   //文本显示
+    void slot_scan();
+    void slot_helpUse();    //使用帮助
+    void slot_fontChange(int n);    //字体变化 1：变大 2：变小
+    //void slot_fontDec();    //字体减小
+    //主窗口内容
     void slot_search();     //搜索
     void slot_abbreButtonOnClicked(int num);
-
+    void slot_try();
     //目录对话框
     void slot_dirSet();
     void slot_fileBrowse();
@@ -93,8 +106,6 @@ public slots:
     void slot_dialogReject();
     void slot_dialogApply();
     void slot_fileProTest();
-
-
 
 private:
     Ui::Abbreviation *ui;
